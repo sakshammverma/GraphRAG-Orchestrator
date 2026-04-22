@@ -1,3 +1,5 @@
+from asyncio import as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import time
 from pathlib import Path
@@ -7,8 +9,14 @@ from langchain_ollama import ChatOllama, OllamaEmbeddings
 from ragas import evaluate
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.llms import LangchainLLMWrapper
-from ragas.metrics import answer_relevancy, context_precision, faithfulness
+from ragas.metrics import answer_relevancy, context_precision, answer_faithfulness
 
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+ 
 ragas_llm = LangchainLLMWrapper(ChatOllama(model="llama3", temperature=0))
 ragas_embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text"))
 
@@ -222,3 +230,33 @@ EVAL_QUESTIONS = [
         "ground_truth": "The Transformer was implemented in TensorFlow and trained using the tensor2tensor library.",
     },
 ]
+assert len(EVAL_QUESTIONS) == 50
+
+
+# Cache helpers 
+def load_cache() -> dict:
+    if CACHE_FILE.exists():
+        return json.loads(CACHE_FILE.read_text())
+    return {}
+ 
+ 
+def save_cache(cache: dict):
+    CACHE_FILE.write_text(json.dumps(cache, indent=2))
+ 
+
+# ── Phase 1: Run one question through pipeline  
+def run_single(item: dict) -> dict:
+    q = item["question"]
+    t0 = time.perf_counter()
+    state = graph_engine_app.invoke({"original_question": q, "loop_count": 0})
+    elapsed = time.perf_counter() - t0
+    return {
+        "question": q,
+        "ground_truth": item["ground_truth"],
+        "answer": state.get("final_answer", ""),
+        "contexts": state.get("retrieved_chunks", []) or ["No context retrieved."],
+        "elapsed_seconds": round(elapsed, 2),
+    }
+ 
+ 
+ 
