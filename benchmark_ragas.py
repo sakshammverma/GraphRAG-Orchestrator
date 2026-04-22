@@ -1,29 +1,121 @@
-from asyncio import as_completed
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import argparse
 import json
 import time
+import typing as t
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from datasets import Dataset
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from ragas import evaluate
-from ragas.embeddings import LangchainEmbeddingsWrapper
-from ragas.llms import LangchainLLMWrapper
-from ragas.metrics import answer_relevancy, context_precision, answer_faithfulness
+from ragas.embeddings.base import BaseRagasEmbeddings
+from ragas.llms.base import BaseRagasLLM
+from ragas.metrics._answer_relevance import AnswerRelevancy
+from ragas.metrics._context_precision import ContextPrecision
+from ragas.metrics._faithfulness import Faithfulness
+from ragas.run_config import RunConfig
+
+answer_faithfulness = Faithfulness(name="answer_faithfulness")
+answer_relevancy = AnswerRelevancy()
+context_precision = ContextPrecision()
+
+if t.TYPE_CHECKING:
+    from langchain_core.callbacks import Callbacks
+    from langchain_core.outputs import LLMResult
+    from langchain_core.prompt_values import PromptValue
 
 try:
     from tqdm import tqdm
     HAS_TQDM = True
 except ImportError:
     HAS_TQDM = False
+
  
-ragas_llm = LangchainLLMWrapper(ChatOllama(model="llama3", temperature=0))
-ragas_embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="nomic-embed-text"))
+class RagasOllamaLLM(BaseRagasLLM):
+    def __init__(self, llm: ChatOllama, run_config: RunConfig | None = None):
+        super().__init__()
+        self.llm = llm
+        self.set_run_config(run_config or RunConfig())
 
-from graph_engine import app as graph_engine_app
+    def generate_text(
+        self,
+        prompt: "PromptValue",
+        n: int = 1,
+        temperature: float | None = 0.01,
+        stop: list[str] | None = None,
+        callbacks: "Callbacks" = None,
+    ) -> "LLMResult":
+        old_temp = getattr(self.llm, "temperature", None)
+        if temperature is not None and hasattr(self.llm, "temperature"):
+            self.llm.temperature = temperature
+        try:
+            result = self.llm.generate_prompt(
+                prompts=[prompt] * n,
+                stop=stop,
+                callbacks=callbacks,
+            )
+            # RAGAS expects shape: [[Generation], [Generation], ...]
+            # one inner list per prompt, each containing exactly one Generation
+            result.generations = [[gens[0]] for gens in result.generations]
+            return result
+        finally:
+            if old_temp is not None:
+                self.llm.temperature = old_temp
 
+    async def agenerate_text(
+        self,
+        prompt: "PromptValue",
+        n: int = 1,
+        temperature: float | None = 0.01,
+        stop: list[str] | None = None,
+        callbacks: "Callbacks" = None,
+    ) -> "LLMResult":
+        old_temp = getattr(self.llm, "temperature", None)
+        if temperature is not None and hasattr(self.llm, "temperature"):
+            self.llm.temperature = temperature
+        try:
+            result = await self.llm.agenerate_prompt(
+                prompts=[prompt] * n,
+                stop=stop,
+                callbacks=callbacks,
+            )
+            result.generations = [[gens[0]] for gens in result.generations]
+            return result
+        finally:
+            if old_temp is not None:
+                self.llm.temperature = old_temp
+
+    def is_finished(self, response: "LLMResult") -> bool:
+        return True
+
+
+class RagasOllamaEmbeddings(BaseRagasEmbeddings):
+    def __init__(self, embeddings: OllamaEmbeddings, run_config: RunConfig | None = None):
+        super().__init__()
+        self.embeddings = embeddings
+        self.set_run_config(run_config or RunConfig())
+
+    def embed_query(self, text: str) -> list[float]:
+        return self.embeddings.embed_query(text)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self.embeddings.embed_documents(texts)
+
+    async def aembed_query(self, text: str) -> list[float]:
+        return await self.embeddings.aembed_query(text)
+
+    async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
+        return await self.embeddings.aembed_documents(texts)
+
+
+# Model setup
+ragas_llm = RagasOllamaLLM(ChatOllama(model="llama3", temperature=0))
+ragas_embeddings = RagasOllamaEmbeddings(OllamaEmbeddings(model="nomic-embed-text"))
+ 
+from graph_engine import app as graph_engine_app  # noqa: E402
+ 
 CACHE_FILE = Path("pipeline_cache.json")
-# Test Set
+ 
 EVAL_QUESTIONS = [
     {
         "question": "What is the core mechanism of the Transformer architecture?",
@@ -203,7 +295,7 @@ EVAL_QUESTIONS = [
     },
     {
         "question": "What is the number of tokens per batch during training?",
-        "ground_truth": "Each training batch contained a set of sentence pairs containing approximately 25,000 source tokens and 25,000 target tokens.",
+        "ground_truth": "Each training batch contained sentence pairs containing approximately 25,000 source tokens and 25,000 target tokens.",
     },
     {
         "question": "What is the perplexity of the base Transformer on English-German?",
@@ -218,11 +310,11 @@ EVAL_QUESTIONS = [
         "ground_truth": "The big model has d_model=1024, 16 heads, ffn_dim=4096 and dropout 0.3, vs base model's d_model=512, 8 heads, ffn_dim=2048, dropout 0.1.",
     },
     {
-        "question": "Why is O(1) path length important for learning?",
-        "ground_truth": "Shorter paths between positions in the network mean gradients flow more easily and the model can learn long-range dependencies without gradient degradation.",
+        "question": "Why is O(1) path length important for learning long-range dependencies?",
+        "ground_truth": "Shorter paths between positions mean gradients flow more easily and the model can learn long-range dependencies without gradient degradation.",
     },
     {
-        "question": "How many P100 GPUs were used for training?",
+        "question": "How many P100 GPUs were used for training the Transformer?",
         "ground_truth": "8 NVIDIA P100 GPUs were used for training both the base and big Transformer models.",
     },
     {
@@ -230,21 +322,22 @@ EVAL_QUESTIONS = [
         "ground_truth": "The Transformer was implemented in TensorFlow and trained using the tensor2tensor library.",
     },
 ]
-assert len(EVAL_QUESTIONS) == 50
+
+assert len(EVAL_QUESTIONS) >= 50, f"Expected at least 50 questions, got {len(EVAL_QUESTIONS)}"
 
 
-# Cache helpers 
+# ── Cache helpers 
 def load_cache() -> dict:
     if CACHE_FILE.exists():
         return json.loads(CACHE_FILE.read_text())
     return {}
- 
- 
-def save_cache(cache: dict):
-    CACHE_FILE.write_text(json.dumps(cache, indent=2))
- 
 
-# ── Phase 1: Run one question through pipeline  
+
+def save_cache(cache: dict) -> None:
+    CACHE_FILE.write_text(json.dumps(cache, indent=2))
+
+
+# ── Phase 1: Run one question through the pipeline  
 def run_single(item: dict) -> dict:
     q = item["question"]
     t0 = time.perf_counter()
@@ -257,6 +350,166 @@ def run_single(item: dict) -> dict:
         "contexts": state.get("retrieved_chunks", []) or ["No context retrieved."],
         "elapsed_seconds": round(elapsed, 2),
     }
- 
- 
- 
+
+
+def run_pipeline_phase(questions: list[dict], n_workers: int) -> list[dict]:
+    cache = load_cache()
+    already_done = sum(1 for q in questions if q["question"] in cache)
+
+    if already_done:
+        print(f"  Resuming: {already_done}/{len(questions)} already cached, skipping those.\n")
+
+    todo = [q for q in questions if q["question"] not in cache]
+
+    if not todo:
+        print("  All pipeline runs cached. Jumping straight to RAGAS eval.\n")
+        return [cache[q["question"]] for q in questions]
+
+    print(f"  Running {len(todo)} pipeline calls ({n_workers} workers in parallel)...\n")
+
+    completed_count = 0
+    with ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = {executor.submit(run_single, item): item for item in todo}
+        iter_futures = (
+            tqdm(as_completed(futures), total=len(todo), desc="Pipeline")
+            if HAS_TQDM
+            else as_completed(futures)
+        )
+        for future in iter_futures:
+            result = future.result()
+            cache[result["question"]] = result
+            save_cache(cache)  # incremental save — safe to Ctrl+C anytime
+            completed_count += 1
+            if not HAS_TQDM:
+                print(
+                    f"  [{completed_count:02d}/{len(todo)}] "
+                    f"{result['question'][:60]}... "
+                    f"({result['elapsed_seconds']}s)"
+                )
+
+    return [cache[q["question"]] for q in questions]
+
+
+# ── Phase 2: RAGAS evaluation 
+def run_ragas_phase(rows: list[dict]):
+    print(f"\n  Running RAGAS evaluation on {len(rows)} samples...")
+    print("  (RAGAS calls the LLM ~2-3x per metric per question — this takes a while)\n")
+
+    from ragas.run_config import RunConfig
+    run_config = RunConfig(timeout=300, max_retries=3, max_wait=60)
+
+    answer_faithfulness.llm       = ragas_llm
+    answer_relevancy.llm          = ragas_llm
+    answer_relevancy.embeddings   = ragas_embeddings
+    context_precision.llm         = ragas_llm
+
+    dataset = Dataset.from_list([
+        {
+            "question":     r["question"],
+            "answer":       r["answer"],
+            "contexts":     r["contexts"],
+            "ground_truth": r["ground_truth"],
+        }
+        for r in rows
+    ])
+
+    return evaluate(
+        dataset,
+        metrics=[answer_faithfulness, answer_relevancy, context_precision],
+        run_config=run_config,
+    )
+# ── Main  
+def main() -> None:
+    parser = argparse.ArgumentParser(description="RAGAS benchmark for the RAG pipeline")
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="Run only 10 questions (smoke test, ~5 min)",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=3,
+        help="Parallel pipeline workers for Phase 1 (default: 3)",
+    )
+    parser.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Delete pipeline_cache.json and rerun everything from scratch",
+    )
+    parser.add_argument(
+        "--output",
+        default="ragas_results.json",
+        help="Output file path (default: ragas_results.json)",
+    )
+    args = parser.parse_args()
+
+    if args.clear_cache and CACHE_FILE.exists():
+        CACHE_FILE.unlink()
+        print("Cache cleared.\n")
+
+    n = 10 if args.quick else 50
+    questions = EVAL_QUESTIONS[:n]
+
+    print(f"\n{'='*60}")
+    print(f"RAGAS BENCHMARK  |  {n} questions  |  {args.workers} workers")
+    if args.quick:
+        print("  [QUICK MODE — 10 questions only]")
+    print(f"  Cache: {CACHE_FILE}  (safe to Ctrl+C and resume)")
+    print(f"{'='*60}\n")
+
+    # ── Phase 1  
+    print("PHASE 1 — Pipeline runs (parallelized + cached)")
+    print("-" * 45)
+    t1_start = time.perf_counter()
+    rows = run_pipeline_phase(questions, n_workers=args.workers)
+    t1_elapsed = time.perf_counter() - t1_start
+    print(f"\n  Phase 1 complete in {t1_elapsed:.1f}s\n")
+
+    # ── Phase 2  
+    print("PHASE 2 — RAGAS evaluation")
+    print("-" * 45)
+    t2_start = time.perf_counter()
+    results = run_ragas_phase(rows)
+    t2_elapsed = time.perf_counter() - t2_start
+
+    # ── Results 
+    scores = results.to_pandas()
+    # Print columns so you can see exact names if anything changes
+    print(f"  Result columns: {list(scores.columns)}\n") 
+    faith_col  = [c for c in scores.columns if "faith"     in c.lower()][0]
+    relev_col  = [c for c in scores.columns if "relevan"   in c.lower()][0]
+    prec_col   = [c for c in scores.columns if "precision" in c.lower()][0]
+
+    summary = {
+        "n_questions":          n,
+        "workers":              args.workers,
+        "phase1_seconds":       round(t1_elapsed, 1),
+        "phase2_seconds":       round(t2_elapsed, 1),
+        "total_seconds":        round(t1_elapsed + t2_elapsed, 1),
+        "answer_faithfulness":  round(float(scores[faith_col].mean()), 4),
+        "answer_relevancy":     round(float(scores[relev_col].mean()), 4),
+        "context_precision":    round(float(scores[prec_col].mean()), 4),
+    }
+
+    print(f"\n{'='*60}")
+    print("RESULTS")
+    print(f"{'='*60}")
+    print(f"  answer_faithfulness : {summary['answer_faithfulness']:.4f}  ({summary['answer_faithfulness']*100:.1f}%)")
+    print(f"  answer_relevancy    : {summary['answer_relevancy']:.4f}  ({summary['answer_relevancy']*100:.1f}%)")
+    print(f"  context_precision   : {summary['context_precision']:.4f}  ({summary['context_precision']*100:.1f}%)")
+    print(f"\n  Phase 1 : {t1_elapsed:.0f}s")
+    print(f"  Phase 2 : {t2_elapsed:.0f}s")
+    print(f"  Total   : {t1_elapsed + t2_elapsed:.0f}s")
+    print(f"{'='*60}\n")
+
+    scores["question"] = [r["question"] for r in rows]
+    Path(args.output).write_text(json.dumps({
+        "summary":      summary,
+        "per_question": scores.to_dict(orient="records"),
+    }, indent=2))
+    print(f"Full results saved to {args.output}")
+
+
+if __name__ == "__main__":
+    main()
