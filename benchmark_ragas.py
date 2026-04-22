@@ -54,9 +54,8 @@ class RagasOllamaLLM(BaseRagasLLM):
                 stop=stop,
                 callbacks=callbacks,
             )
-            # RAGAS expects shape: [[Generation], [Generation], ...]
-            # one inner list per prompt, each containing exactly one Generation
-            result.generations = [[gens[0]] for gens in result.generations]
+            # BaseRagasLLM expects one prompt result containing n generations.
+            result.generations = [[gens[0] for gens in result.generations if gens]]
             return result
         finally:
             if old_temp is not None:
@@ -79,7 +78,7 @@ class RagasOllamaLLM(BaseRagasLLM):
                 stop=stop,
                 callbacks=callbacks,
             )
-            result.generations = [[gens[0]] for gens in result.generations]
+            result.generations = [[gens[0] for gens in result.generations if gens]]
             return result
         finally:
             if old_temp is not None:
@@ -109,7 +108,15 @@ class RagasOllamaEmbeddings(BaseRagasEmbeddings):
 
 
 # Model setup
-ragas_llm = RagasOllamaLLM(ChatOllama(model="llama3", temperature=0))
+ragas_llm = RagasOllamaLLM(
+    ChatOllama(
+        model="llama3",
+        temperature=0,
+        format="json",
+        num_ctx=8192,
+        num_predict=2048,
+    )
+)
 ragas_embeddings = RagasOllamaEmbeddings(OllamaEmbeddings(model="nomic-embed-text"))
  
 from graph_engine import app as graph_engine_app  # noqa: E402
@@ -378,7 +385,7 @@ def run_pipeline_phase(questions: list[dict], n_workers: int) -> list[dict]:
         for future in iter_futures:
             result = future.result()
             cache[result["question"]] = result
-            save_cache(cache)  # incremental save — safe to Ctrl+C anytime
+            save_cache(cache)  
             completed_count += 1
             if not HAS_TQDM:
                 print(
@@ -396,8 +403,7 @@ def run_ragas_phase(rows: list[dict]):
     print("  (RAGAS calls the LLM ~2-3x per metric per question — this takes a while)\n")
 
     from ragas.run_config import RunConfig
-    run_config = RunConfig(timeout=300, max_retries=3, max_wait=60)
-
+    run_config = RunConfig(timeout=1200, max_retries=1, max_wait=10, max_workers=1)
     answer_faithfulness.llm       = ragas_llm
     answer_relevancy.llm          = ragas_llm
     answer_relevancy.embeddings   = ragas_embeddings
@@ -405,17 +411,17 @@ def run_ragas_phase(rows: list[dict]):
 
     dataset = Dataset.from_list([
         {
-            "question":     r["question"],
-            "answer":       r["answer"],
-            "contexts":     r["contexts"],
-            "ground_truth": r["ground_truth"],
+            "user_input":         r["question"],
+            "response":           r["answer"],
+            "retrieved_contexts": r["contexts"],
+            "reference":          r["ground_truth"],
         }
         for r in rows
     ])
 
     return evaluate(
         dataset,
-        metrics=[answer_faithfulness, answer_relevancy, context_precision],
+        metrics=[answer_faithfulness],
         run_config=run_config,
     )
 # ── Main  
@@ -475,30 +481,24 @@ def main() -> None:
 
     # ── Results 
     scores = results.to_pandas()
-    # Print columns so you can see exact names if anything changes
-    print(f"  Result columns: {list(scores.columns)}\n") 
-    faith_col  = [c for c in scores.columns if "faith"     in c.lower()][0]
-    relev_col  = [c for c in scores.columns if "relevan"   in c.lower()][0]
-    prec_col   = [c for c in scores.columns if "precision" in c.lower()][0]
+    print(f"  Result columns: {list(scores.columns)}\n")
+
+    faith_col = [c for c in scores.columns if "faith" in c.lower()][0]
+    faith_score = round(float(scores[faith_col].mean()), 4)
 
     summary = {
-        "n_questions":          n,
-        "workers":              args.workers,
-        "phase1_seconds":       round(t1_elapsed, 1),
-        "phase2_seconds":       round(t2_elapsed, 1),
-        "total_seconds":        round(t1_elapsed + t2_elapsed, 1),
-        "answer_faithfulness":  round(float(scores[faith_col].mean()), 4),
-        "answer_relevancy":     round(float(scores[relev_col].mean()), 4),
-        "context_precision":    round(float(scores[prec_col].mean()), 4),
+        "n_questions":         n,
+        "phase1_seconds":      round(t1_elapsed, 1),
+        "phase2_seconds":      round(t2_elapsed, 1),
+        "total_seconds":       round(t1_elapsed + t2_elapsed, 1),
+        "answer_faithfulness": faith_score,
     }
 
     print(f"\n{'='*60}")
     print("RESULTS")
     print(f"{'='*60}")
-    print(f"  answer_faithfulness : {summary['answer_faithfulness']:.4f}  ({summary['answer_faithfulness']*100:.1f}%)")
-    print(f"  answer_relevancy    : {summary['answer_relevancy']:.4f}  ({summary['answer_relevancy']*100:.1f}%)")
-    print(f"  context_precision   : {summary['context_precision']:.4f}  ({summary['context_precision']*100:.1f}%)")
-    print(f"\n  Phase 1 : {t1_elapsed:.0f}s")
+    print(f"  answer_faithfulness : {faith_score:.4f}  ({faith_score*100:.1f}%)")
+    print(f"  Phase 1 : {t1_elapsed:.0f}s")
     print(f"  Phase 2 : {t2_elapsed:.0f}s")
     print(f"  Total   : {t1_elapsed + t2_elapsed:.0f}s")
     print(f"{'='*60}\n")
