@@ -7,23 +7,22 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-
-# Import your compiled LangGraph engine
+ 
 from graph_engine import app as graph_engine_app
 
-# --- 1. API Initialization ---
+# APi Initialization 
 app = FastAPI(title="Agentic RAG Engine API", version="1.0.0")
 
-# Enable CORS so a frontend (React, Vue, vanilla JS) can communicate with this API
+# Enable CORS  
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this to your frontend URL
+    allow_origins=["*"],   
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- 2. Data Models ---
+# Data Models 
 class ResearchRequest(BaseModel):
     query: str
 
@@ -53,13 +52,10 @@ def build_node_payload(
     return payload
 
 
-# --- 3. The Streaming Generator ---
+# The Streaming Generator
 async def stream_graph_updates(user_query: str) -> AsyncIterator[str]:
-    """
-    Yield Server-Sent Events (SSE) for each LangGraph node update.
-    The blocking graph execution runs in a worker thread so the FastAPI
-    event loop stays responsive while results stream back to the client.
-    """
+    
+    # Yield Server-Sent Events (SSE) for each LangGraph node update. 
     initial_state = {"original_question": user_query, "loop_count": 0}
     event_queue: asyncio.Queue[str | None] = asyncio.Queue()
     loop = asyncio.get_running_loop()
@@ -109,7 +105,7 @@ async def stream_graph_updates(user_query: str) -> AsyncIterator[str]:
 
         yield event
 
-# --- 4. The API Endpoint ---
+# The API Endpoint 
 @app.get("/health")
 async def healthcheck():
     return {"status": "ok"}
@@ -133,6 +129,5 @@ async def research_endpoint(request: ResearchRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    # Run the server on port 8000
     print("\nStarting API Server on http://localhost:8000 ...")
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
