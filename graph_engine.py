@@ -128,7 +128,7 @@ def critic_agent(state: AgentState) -> AgentState:
     chunks = state.get("retrieved_chunks", [])
     loops = state.get("loop_count", 0)
 
-    if loops >= 1:
+    if loops >= 3:
         print(" -> Max loops reached. Forcing to Publisher.")
         return {"critic_decision": "VALID"}
 
