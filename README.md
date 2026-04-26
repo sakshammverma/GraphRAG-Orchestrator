@@ -13,7 +13,6 @@ A production grade agentic RAG system built with LangGraph, ChromaDB, FastAPI, a
 | Hallucination Rate — RAG Pipeline | 44.4% |
 | Hallucination Reduction | **22 percentage points** |
 | Load Test Failure Rate (20 concurrent users) | **0%** |
-| p50 Time-to-First-Byte (SSE streaming) | < 50ms |
  
 Full results: [`ragas_results.json`](ragas_results.json) · [`hallucination_results.json`](hallucination_results.json) · [`locust_summary.json`](locust_summary.json)
  
