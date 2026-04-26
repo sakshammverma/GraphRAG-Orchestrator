@@ -161,4 +161,22 @@ python benchmark_hallucination.py
 locust -f locustfile.py --headless -u 20 -r 5 -t 60s --host http://localhost:8000
 ```
 
+## Docker
+
+Build the image:
+```bash
+docker build -t research-assistant .
+```
+
+Run the container:
+```bash
+docker run -p 8000:8000 \
+  -e OLLAMA_HOST=http://host.docker.internal:11434 \
+  -v $(pwd)/chroma-db:/app/chroma-db \
+  research-assistant
+```
+
+Note: Ollama must be running on the host machine with `llama3` 
+and `nomic-embed-text` pulled.
+
 
