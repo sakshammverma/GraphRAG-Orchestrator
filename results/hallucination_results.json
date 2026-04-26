@@ -1,0 +1,91 @@
+{
+  "summary": {
+    "total_questions": 9,
+    "bare_hallucination_rate_pct": 66.7,
+    "rag_hallucination_rate_pct": 44.4,
+    "reduction_percentage_points": 22.2
+  },
+  "records": [
+    {
+      "question": "What does Mamba's selective SSM make input-dependent that traditional SSMs do not?",
+      "bare_answer": "According to the paper \"Attention Is All You Need\" by Vaswani et al., Mamba's selective self-attention mechanism (SSM) makes the following input-dependent, which traditional SSMs do not:\n\n* The attention weights are computed based on the input sequence, rather than being fixed or learned only from the output sequence.\n\nIn other words, Mamba's SSM takes into account the entire input sequence when computing attention weights, whereas traditional SSMs typically use a fixed or learned pattern of attention that is independent of the input sequence.",
+      "bare_score": 6.0,
+      "bare_hallucinated": true,
+      "rag_answer": "What a delightful challenge!\n\nAfter carefully reading through the context, I found that there are several questions and topics discussed. However, based on the provided text, it seems that you're asking me to answer a question using only the context.\n\nUnfortunately, I couldn't find any specific question being asked in the given text. It appears to be a collection of abstracts, research papers, and technical writing related to natural language processing, information retrieval, and semantic search.\n\nIf you could provide more context or clarify what question you'd like me to answer using only this text, I'll do my best to assist you!",
+      "rag_score": 9.0,
+      "rag_hallucinated": false
+    },
+    {
+      "question": "What is the exact name of the selection mechanism Mamba uses to filter information?",
+      "bare_answer": "According to the paper \"Attention Is All You Need\" by Vaswani et al., the attention mechanism used in the Transformer model is called Self-Attention, not Mamba. The Self-Attention mechanism allows the model to attend to different parts of the input sequence simultaneously and weigh their importance.\n\nSo, the correct answer would be: Self-Attention",
+      "bare_score": 6.0,
+      "bare_hallucinated": true,
+      "rag_answer": "The exact name of the selection mechanism Mamba uses to filter information is not explicitly stated in the provided context. The text only mentions that Mamba performs similarly to the H3 architecture and that interleaving the Mamba block with other blocks, such as MLP or MHA, does not significantly affect its performance. Therefore, I cannot provide a specific answer based on the given context.",
+      "rag_score": 9.0,
+      "rag_hallucinated": false
+    },
+    {
+      "question": "What sequence length does Mamba achieve 5x faster inference than Transformer at?",
+      "bare_answer": "According to the paper \"Attention Is All You Need\" by Vaswani et al., Mamba achieves 5x faster inference than Transformer for sequence lengths of 1024.",
+      "bare_score": 2.0,
+      "bare_hallucinated": true,
+      "rag_answer": "The context does not provide the specific sequence length at which Mamba achieves 5x faster inference than Transformer. The provided text only mentions that Mamba enjoys fast inference (5\u00d7 higher throughput than Transformers) and linear scaling in sequence length, but it does not specify the exact sequence length at which this occurs.",
+      "rag_score": 9.0,
+      "rag_hallucinated": false
+    },
+    {
+      "question": "What specific architecture block does Mamba introduce combining SSM with gating?",
+      "bare_answer": "Mamba doesn't actually introduce a new architecture block. Instead, it's an extension of the Transformer model, specifically the \"Attention is All You Need\" paper by Vaswani et al.\n\nIn this context, there is no specific architecture block introduced in Mamba that combines SSM (Self-Sustaining Memory) with gating.",
+      "bare_score": 6.0,
+      "bare_hallucinated": true,
+      "rag_answer": "If the context is only the provided text, then the answer would be:\n\nThe selective state space (SSM) architecture interleaves a block inspired by linear attention with an MLP (multi-layer perceptron) block. This simplified architecture combines these two components into one, which is stacked homogenously.",
+      "rag_score": 6.0,
+      "rag_hallucinated": true
+    },
+    {
+      "question": "What does this paper propose as an alternative to vector similarity search in RAG?",
+      "bare_answer": "According to the paper \"Attention Is All You Need\" by Vaswani et al. (2017), they propose using self-attention mechanisms as an alternative to traditional recurrent and convolutional neural networks, not specifically for vector similarity search in RAG.\n\nIn the context of sequence-to-sequence tasks, such as machine translation, the authors suggest that self-attention can be used to model the relationships between different parts of a sentence or phrase, eliminating the need for recurrence or convolution. This approach allows for parallelization and efficient computation, making it more suitable for long-range dependencies.\n\nSo, the answer is not directly related to vector similarity search in RAG, but rather proposes an alternative architecture for sequence-to-sequence tasks using self-attention mechanisms.",
+      "bare_score": 5.0,
+      "bare_hallucinated": true,
+      "rag_answer": "The context does not provide enough information to answer the question about what alternative to vector similarity search in RAG is proposed. The provided text only mentions that there are alternatives to semantic vector search, but it does not specify what those alternatives are or how they relate to the paper's proposal. Therefore, I cannot provide an answer based on the given context.",
+      "rag_score": 9.0,
+      "rag_hallucinated": false
+    },
+    {
+      "question": "What reasoning approach does the paper propose instead of embedding-based retrieval?",
+      "bare_answer": "According to the paper \"Attention Is All You Need\" by Vaswani et al. (2017), the proposed reasoning approach is self-attention, which replaces traditional recurrent and convolutional neural networks with a fully attention-based architecture.\n\nIn other words, instead of using embedding-based retrieval methods that rely on fixed-length embeddings and sequential processing, the paper proposes to use self-attention mechanisms to process input sequences in parallel, without relying on explicit positional information or recurrence.",
+      "bare_score": 9.0,
+      "bare_hallucinated": false,
+      "rag_answer": "The paper does not propose a specific reasoning approach instead of embedding-based retrieval. The context discusses various approaches to Retrieval-Augmented Generation (RAG), including pre-retrieval, intra-retrieval, and post-retrieval strategies, as well as non-vector and structured retrieval approaches such as hierarchical node-based reasoning systems. However, it does not present a specific alternative to embedding-based retrieval.",
+      "rag_score": 6.0,
+      "rag_hallucinated": true
+    },
+    {
+      "question": "What does the paper call its proposed non-vector retrieval system?",
+      "bare_answer": "According to the paper \"Attention Is All You Need\" by Vaswani et al. (2017), the proposed non-vector retrieval system is called the \"Self-Attention Mechanism\".",
+      "bare_score": 9.0,
+      "bare_hallucinated": false,
+      "rag_answer": "What if the Mamba block is interleaved with MHA (multi-head attention) blocks? This can also be interpreted as taking a Transformer with SwiGLU MLPs (i.e. what we call Transformer++) and simply adding SSMs to the MLP blocks.\n\nFigure 9 (Right) shows these variants compared to the original (homogenous) Mamba architecture. Interestingly, neither change matters too much. The Mamba-MLP architecture is only slightly worse, and still better than all models except Transformer++. The Mamba-MHA architecture is only slightly better, which is somewhat surprising in light of the fact that many recent works have found that combining (LTI) SSMs with Attention can lead to substantial improvements (Dao, Fu, Saab, et al. 2023; Fathi et al. 2023; Fathullah et al. 2023; Saon, Gupta, and Cui 2023; Zuo et al. 2022).",
+      "rag_score": 2.0,
+      "rag_hallucinated": true
+    },
+    {
+      "question": "What specific failure mode of cosine similarity does the paper demonstrate?",
+      "bare_answer": "According to the paper \"Attention Is All You Need\" by Vaswani et al. (2017), one specific failure mode of cosine similarity is that it can be misled by the presence of a large amount of noise in the input data.\n\nIn particular, the authors show that when there is a lot of noise in the input sequence, cosine similarity can become dominated by the noise and fail to capture meaningful relationships between the input elements. This is because cosine similarity is sensitive to the magnitude of the input vectors, which can be affected by the presence of noise.\n\nThe paper demonstrates this failure mode using an example where a simple language translation task becomes much more difficult when there is a lot of noise in the input sequence. The authors show that by using self-attention mechanisms instead of cosine similarity, they are able to better handle noisy input data and achieve better performance on the translation task.",
+      "bare_score": 6.0,
+      "bare_hallucinated": true,
+      "rag_answer": "The context does not provide enough information to answer the question about what specific failure mode of cosine similarity the paper demonstrates. The text only mentions that the authors found that combining SSMs with attention did not lead to substantial improvements, which is contrary to many recent works in the field. However, it does not specify a particular failure mode or demonstrate any issues with cosine similarity.",
+      "rag_score": 6.0,
+      "rag_hallucinated": true
+    },
+    {
+      "question": "What evaluation benchmark does the paper use to test its proposed approach?",
+      "bare_answer": "According to the paper \"Attention Is All You Need\" by Vaswani et al. (2017), the authors use the following evaluation benchmarks to test their proposed Transformer model:\n\n1. **BLEU score**: The paper uses the BLEU (Bilingual Evaluation Understudy) metric to evaluate the quality of machine translation outputs.\n2. **Perplexity**: The authors also report perplexity scores on the validation set to measure the model's ability to predict the next token in a sequence.\n3. **Meteor score**: In addition, the paper uses the METEOR (Metric for Evaluation of Translation with Edit Distance) metric to evaluate the quality of machine translation outputs.\n\nThese benchmarks are commonly used in natural language processing tasks, such as machine translation, and provide a comprehensive evaluation of the proposed approach.",
+      "bare_score": 9.0,
+      "bare_hallucinated": false,
+      "rag_answer": "The question is not provided. However, based on the context, it appears that you are asking me to answer a question related to technical writing or large language models.\n\nIf I had to guess, the question might be something like \"What are some key takeaways from this paper?\" or \"How does Mamba compare to other attention-free models?\"\n\nHowever, without the actual question, I can only provide general information about the context. If you could please provide the question, I would be happy to try and answer it based on the provided text.",
+      "rag_score": 9.0,
+      "rag_hallucinated": false
+    }
+  ]
+}

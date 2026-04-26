@@ -1,0 +1,46 @@
+[
+  {
+    "query": "What is the core mechanism of the Transformer architecture?",
+    "elapsed_seconds": 48.59
+  },
+  {
+    "query": "How does multi-head attention differ from single-head attention?",
+    "elapsed_seconds": 61.41
+  },
+  {
+    "query": "What is the role of positional encoding?",
+    "elapsed_seconds": 56.16
+  },
+  {
+    "query": "What is the significance of residual connections in the Transformer?",
+    "elapsed_seconds": 46.55
+  },
+  {
+    "query": "How does the Transformer model long-range dependencies?",
+    "elapsed_seconds": 43.56
+  },
+  {
+    "query": "What is layer normalization and why is it used instead of batch normalization?",
+    "elapsed_seconds": 46.99
+  },
+  {
+    "query": "What is the role of the final linear + softmax layer in the decoder?",
+    "elapsed_seconds": 43.58
+  },
+  {
+    "query": "How does the Transformer achieve parallelism during training?",
+    "elapsed_seconds": 55.92
+  },
+  {
+    "query": "What is the maximum path length between positions in self-attention?",
+    "elapsed_seconds": 43.22
+  },
+  {
+    "query": "What is the Transformer big model configuration?",
+    "elapsed_seconds": 44.26
+  },
+  {
+    "query": "How are embeddings scaled in the Transformer input?",
+    "elapsed_seconds": 39.79
+  }
+]
