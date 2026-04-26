@@ -4,6 +4,28 @@ A production grade agentic RAG system built with LangGraph, ChromaDB, FastAPI, a
 
 ---
 
+## Table of Contents
+
+- [Benchmark Results](#benchmark-results)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Setup & Running](#setup--running)
+  - [Prerequisites](#prerequisites)
+  - [1. Install dependencies](#1-install-dependencies)
+  - [2. Pull models](#2-pull-models)
+  - [3. Add PDFs and ingest](#3-add-pdfs-and-ingest)
+  - [4. Start the API server](#4-start-the-api-server)
+  - [5. Send a research query](#5-send-a-research-query)
+- [Running Benchmarks](#running-benchmarks)
+  - [RAGAS (answer faithfulness)](#ragas-answer-faithfulness)
+  - [Hallucination (LLM-as-judge)](#hallucination-llm-as-judge)
+  - [Load test (Locust)](#load-test-locust)
+- [Reproducing Results](#reproducing-results)
+- [Docker](#docker)
+
+---
+
 ## Benchmark Results
  
 | Metric | Result |
@@ -178,5 +200,3 @@ docker run -p 8000:8000 \
 
 Note: Ollama must be running on the host machine with `llama3` 
 and `nomic-embed-text` pulled.
-
-
