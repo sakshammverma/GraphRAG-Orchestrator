@@ -25,7 +25,7 @@ class AgentState(TypedDict, total=False):
     final_answer: str
 
 
-# ── Utilities 
+# Utilities 
 def safe_for_console(text: str) -> str:
     encoding = sys.stdout.encoding or "utf-8"
     return text.encode(encoding, errors="replace").decode(encoding, errors="replace")
@@ -48,7 +48,7 @@ def normalize_decision(raw_decision: str) -> str:
     return "VALID" if cleaned == "VALID" else "INVALID"
 
 
-# ── Model & DB setup 
+# Model & DB setup 
 print("Booting AI Models and Database...")
 logging.basicConfig()
 logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
@@ -70,10 +70,10 @@ advanced_retriever = MultiQueryRetriever.from_llm(
 )
 
 
-# ── Agents 
+# Agents 
 def planner_agent(state: AgentState) -> AgentState:
     print("\n[Node] PLANNER AGENT")
-    question = state["original_question"]  # type: ignore
+    question = state["original_question"] 
     loop_count = state.get("loop_count", 0)
  
     if loop_count == 0:
@@ -99,7 +99,7 @@ def planner_agent(state: AgentState) -> AgentState:
         instruction + "\nQuestion: {question}\nQueries:"
     )
     response = (prompt | llm).invoke({"question": question})
-    queries = parse_queries(response.content, question)  # type: ignore
+    queries = parse_queries(response.content, question)   
 
     print(f"Generated Queries: {queries}")
    
@@ -108,7 +108,7 @@ def planner_agent(state: AgentState) -> AgentState:
 
 def retriever_agent(state: AgentState) -> AgentState:
     print("\n[Node] RETRIEVER AGENT")
-    queries = state["sub_queries"]  # type: ignore
+    queries = state["sub_queries"]   
     all_chunks: list[str] = []
 
     for query in queries:
@@ -124,7 +124,7 @@ def retriever_agent(state: AgentState) -> AgentState:
 
 def critic_agent(state: AgentState) -> AgentState:
     print("\n[Node] CRITIC AGENT")
-    question = state["original_question"]  # type: ignore
+    question = state["original_question"]   
     chunks = state.get("retrieved_chunks", [])
     loops = state.get("loop_count", 0)
 
@@ -146,14 +146,14 @@ def critic_agent(state: AgentState) -> AgentState:
     raw_decision = (prompt | llm).invoke(
         {"question": question, "context": context}
     ).content
-    decision = normalize_decision(raw_decision)  # type: ignore
+    decision = normalize_decision(raw_decision)   
     print(f" -> Critic Decision: {decision}")
     return {"critic_decision": decision}
 
 
 def publisher_agent(state: AgentState) -> AgentState:
     print("\n[Node] PUBLISHER AGENT")
-    question = state["original_question"]  # type: ignore
+    question = state["original_question"]   
     context = "\n\n".join(state.get("retrieved_chunks", []))
 
     prompt = PromptTemplate.from_template(
@@ -166,10 +166,10 @@ def publisher_agent(state: AgentState) -> AgentState:
 
     print(" -> Generating final response...")
     response = (prompt | llm).invoke({"question": question, "context": context})
-    return {"final_answer": response.content}  # type: ignore
+    return {"final_answer": response.content}   
 
 
-# ── Routing  
+# Routing  
 def routing_logic(state: AgentState) -> str:
     decision = state.get("critic_decision", "INVALID")
     if decision == "INVALID":
@@ -179,7 +179,7 @@ def routing_logic(state: AgentState) -> str:
     return "publisher"
 
 
-# ── Graph 
+# Graph 
 print("\nCompiling LangGraph...")
 workflow = StateGraph(AgentState)
 
